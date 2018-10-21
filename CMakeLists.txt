@@ -1,7 +1,7 @@
 ##
 # MIT License
 #
-# Copyright (c) 2018 Mathieu-Andre Chiasson
+# Copyright (c) 2017-2018 Mathieu-Andre Chiasson
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -41,11 +41,14 @@ hunter_add_package(msdfgen)
 hunter_add_package(PocoCpp)
 hunter_add_package(OpenSSL)
 hunter_add_package(RapidJSON)
+hunter_add_package(PNG)
+
 
 find_package(msdfgen CONFIG REQUIRED)
 find_package(Poco REQUIRED NetSSL CONFIG)
 find_package(OpenSSL REQUIRED)
 find_package(RapidJSON CONFIG REQUIRED)
+find_package(PNG CONFIG REQUIRED)
 find_package(OpenMP)
 
 list(APPEND deps
@@ -55,15 +58,80 @@ list(APPEND deps
     OpenSSL::SSL
     OpenSSL::Crypto
     RapidJSON::rapidjson
+    PNG::png
 )
 
 if (TARGET OpenMP::OpenMP_CXX)
     list(APPEND deps OpenMP::OpenMP_CXX)
 endif()
 
+##
+# Generate embedded resources
+##
+file(GLOB_RECURSE TUNIS_RC_FILES http/public/*)
+add_custom_command(
+    OUTPUT  ${PROJECT_BINARY_DIR}/TunisRC.c
+            ${PROJECT_BINARY_DIR}/TunisRC.h
+    COMMAND ${CMAKE_COMMAND}
+            -Dresource_name=TunisRC
+            -Dresource_dir=${PROJECT_SOURCE_DIR}/http/public
+            -Ddestination_dir=${PROJECT_BINARY_DIR}
+            -P ${PROJECT_SOURCE_DIR}/cmake/RCUtilCommand.cmake
+    DEPENDS ${TUNIS_RC_FILES}
+)
+set_source_files_properties(${PROJECT_BINARY_DIR}/TunisRC.c PROPERTIES GENERATED TRUE)
+set_source_files_properties(${PROJECT_BINARY_DIR}/TunisRC.h PROPERTIES GENERATED TRUE)
+
+##
+# Compile .cpsp files to .cpp
+##
+file(GLOB PAGES_IN RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "http/views/*.cpsp")
+include(preprocess_cpsp)
+preprocess_cpsp(PAGES_OUT ${PAGES_IN})
+
 add_executable(${PROJECT_NAME}
     main.cpp
-    TunisHTTPRequestHandlerFactory.cpp
-    TunisHTTPRequestHandlerFactory.h
+    data/TunisFontDB.cpp
+    data/TunisFontDB.h
+    data/TunisGoogleWebFontDB.cpp
+    data/TunisGoogleWebFontDB.h
+    font/TunisAtlas.cpp
+    font/TunisAtlas.h
+    font/TunisFont.cpp
+    font/TunisFont.h
+    font/TunisFontStyle.cpp
+    font/TunisFontStyle.h
+    font/TunisGlyph.h
+    http/TunisHTTPAtlasRequestHandler.cpp
+    http/TunisHTTPAtlasRequestHandler.h
+    http/TunisHTTPDefaultRequestHandler.cpp
+    http/TunisHTTPDefaultRequestHandler.h
+    http/TunisHTTPDownloadHelper.cpp
+    http/TunisHTTPDownloadHelper.h
+    http/TunisHTTPFontRequestHandler.cpp
+    http/TunisHTTPFontRequestHandler.h
+    http/TunisHTTPGlyphAnalyzerRequestHandler.cpp
+    http/TunisHTTPGlyphAnalyzerRequestHandler.h
+    http/TunisHTTPGlyphRequestHandler.cpp
+    http/TunisHTTPGlyphRequestHandler.h
+    http/TunisHTTPRequestHandler.cpp
+    http/TunisHTTPRequestHandlerFactory.cpp
+    http/TunisHTTPRequestHandlerFactory.h
+    http/TunisHTTPRequestHandler.h
+    http/TunisHTTPRootRequestHandler.cpp
+    http/TunisHTTPRootRequestHandler.h
+    util/TunisPNG.cpp
+    util/TunisPNG.h
+
+    ##
+    # Dynamic Web views
+    ##
+    ${PAGES_IN}
+    ${PAGES_OUT}
+
+    # Embedded HTTP public files
+    ${TUNIS_RC_FILES}
+    ${PROJECT_BINARY_DIR}/TunisRC.c
+    ${PROJECT_BINARY_DIR}/TunisRC.h
 )
 target_link_libraries(${PROJECT_NAME} PRIVATE ${deps})

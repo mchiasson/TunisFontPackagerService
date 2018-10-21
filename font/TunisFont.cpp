@@ -21,53 +21,62 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-#include <iostream>
+#include "TunisFont.h"
 
-#include <Poco/Util/ServerApplication.h>
-#include <Poco/Net/ServerSocket.h>
-#include <Poco/Net/HTTPServer.h>
-#include <Poco/LogStream.h>
-
-#include "http/TunisHTTPRequestHandlerFactory.h"
-
-using namespace Poco;
-using namespace Poco::Util;
-using namespace Poco::Net;
-
-class TunisFontPackagingService : public ServerApplication
+TunisFont::TunisFont() :
+    m_face(nullptr),
+    m_style(TunisFontStyle::Invalid)
 {
-protected:
+    FT_Init_FreeType(&m_library);
+}
 
-    virtual int main(const std::vector<std::string> &args) override
+TunisFont::TunisFont(const TunisFont& other) :
+    m_face(nullptr),
+    m_style(TunisFontStyle::Invalid)
+{
+    *this = other;
+
+    FT_Init_FreeType(&m_library);
+
+    if (m_fileName.length() > 0)
     {
-        LogStream log(Poco::Logger::get("logger"));
+        FT_New_Face(m_library, m_fileName.c_str(), 0, &m_face);
+    }
+}
 
-        UInt16 port = 3000;
-        if (args.size() > 0)
-        {
-            port = static_cast<UInt16>(std::stoi(args[0]));
-        }
-
-        ServerSocket socket(port);
-
-        HTTPServerParams *pParams = new HTTPServerParams();
-        pParams->setMaxQueued(100);
-        pParams->setMaxThreads(16);
-
-        HTTPServer server(new TunisHTTPRequestHandlerFactory(), socket, pParams);
-
-        log.notice() << "Starting HTTP server on port " << port << std::endl;
-        server.start();
-
-        waitForTerminationRequest();
-
-        log.notice() << "Shutting down server" << std::endl;
-
-        server.stop();
-
-        return EXIT_OK;
+TunisFont::~TunisFont()
+{
+    if (m_face)
+    {
+        FT_Done_Face(m_face);
+        m_face = nullptr;
     }
 
-};
+    FT_Done_FreeType(m_library);
+    m_library = nullptr;
+}
 
-POCO_SERVER_MAIN(TunisFontPackagingService)
+TunisFont &TunisFont::operator=(const TunisFont& other)
+{
+    if (m_face)
+    {
+        FT_Done_Face(m_face);
+    }
+
+    *this = other;
+    if (m_fileName.length() > 0)
+    {
+        FT_New_Face(m_library, m_fileName.c_str(), 0, &m_face);
+    }
+
+    return *this;
+}
+
+void TunisFont::setFileName(const std::string &fileName)
+{
+    m_fileName = fileName;
+    if (m_fileName.length() > 0)
+    {
+        FT_New_Face(m_library, m_fileName.c_str(), 0, &m_face);
+    }
+}

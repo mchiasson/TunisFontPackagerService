@@ -1,0 +1,542 @@
+<%@ page class="TunisFontRequestHandler" %>
+<%!
+    #include "data/TunisGoogleWebFontDB.h"
+    #include "TunisRC.h"
+    #include <Poco/DateTime.h>
+%>
+<!--
+ MIT License
+
+ Copyright (c) 2017-2018 Mathieu-Andre Chiasson
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+-->
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta charset="utf-8">
+<title>Tunis Font Packaging Service</title>
+<script src="glutil.js"></script>
+<script src="glmatrix.js"></script>
+<style>
+canvas {
+    border:1px solid black;
+}
+
+table {
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 4px;
+}
+
+table.glcontrol, table.glcontrol th, table.glcontrol td {
+    border: 1px solid grey;
+}
+
+input[type=range] {
+    width: 500px; /* Specific width is required for Firefox. */
+}
+
+.loader {
+    border: 8px solid #f3f3f3;
+    border-radius: 50%;
+    border-top: 8px solid #737373;
+    width: 16px;
+    height: 16px;
+    -webkit-animation: spin 1s linear infinite;
+    animation: spin 1s linear infinite;
+    display: 'none'; /* hidden by default */
+}
+
+@-webkit-keyframes spin {
+  0% { -webkit-transform: rotate(0deg); }
+  100% { -webkit-transform: rotate(360deg); }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+</style>
+
+</head>
+<body>
+
+<table>
+    <tr>
+        <th>Font Family</th>
+        <td><select id="font_family" name="font_family"/></td>
+        <th>Font Style</th>
+        <td><select id="font_style" name="font_style"/></td>
+        <th>Font Size</th>
+        <td><select id="font_size" name="font_size"/></td>
+        <td>
+            <form id="font_download" method="get">
+                <button type="submit">Download Font</button>
+            </form>
+        </td>
+    </tr>
+    <tr>
+    </tr>
+</table>
+
+<textarea id="test_data" rows="5" cols="50">
+The quick brown fox jumps over the lazy dog.
+</textarea>
+
+
+<table style="border: 0px;">
+    <tr>
+        <th style="border: 0px;" id="status_text">Loading...</th>
+        <td style="border: 0px; width:32px; height:32px;"><div class="loader" id="loader"></div></td>
+    </tr>
+</table>
+
+<table>
+   <tr>
+       <td>
+        <canvas id="webgl" width="640" height="480" style=""></canvas>
+       </td>
+       <td style="vertical-align:top;">
+            <table class="glcontrol">
+                <tr>
+                   <th>Scale</th>
+                   <td>
+                       <form>
+                           <input type="range" value="32" step="0.01" min="1" max="512.0" id="scale">
+                           <output name="scaleOutput" id="scale"/>
+                       </form>
+                   </td>
+                </tr>
+                <tr>
+                   <th>Rotate</th>
+                   <td>
+                       <form>
+                           <input type="range" value="0" step="0.01" min="-3.141592" max="3.141592" id="rotate">
+                           <output name="rotateOutput" id="rotate"/>
+                       </form>
+                   </td>
+                </tr>
+                <tr>
+                   <th>Translate X</th>
+                   <td>
+                       <form>
+                           <input type="range" value="0" step="0.001" min="-1.0" max="1.0" id="translateX">
+                           <output name="translateXOutput" id="translateX"/>
+                       </form>
+                   </td>
+                </tr>
+                <tr>
+                   <th>Translate Y</th>
+                   <td>
+                       <form>
+                           <input type="range" value="0" step="0.001" min="-1.0" max="1.0" id="translateY">
+                           <output name="translateYOutput" id="translateY"/>
+                       </form>
+                   </td>
+                </tr>
+                <tr>
+                   <th>Outline Thickness</th>
+                   <td>
+                       <form>
+                           <input type="range" value="0.0" step="0.01" min="-0.5" max="0.5" id="outlineThickness">
+                           <output name="outlineThicknessOutput" id="outlineThickness"/>
+                       </form>
+                   </td>
+               </tr>
+               <tr>
+                   <th>Shadow Offset X</th>
+                   <td>
+                       <form>
+                           <input type="range" value="2.0" step="0.1" min="-5" max="5" id="shadowOffsetX">
+                           <output name="shadowOffsetXOutput" id="shadowOffsetX"/>
+                       </form>
+                   </td>
+               </tr>
+               <tr>
+                   <th>Shadow Offset Y</th>
+                   <td>
+                       <form>
+                           <input type="range" value="2.0" step="0.1" min="-5" max="5" id="shadowOffsetY">
+                           <output name="shadowOffsetYOutput" id="shadowOffsetY"/>
+                       </form>
+                   </td>
+               </tr>
+               <tr>
+                   <th>Mode</th>
+                   <td>
+                       <form>
+                           <input type="radio" name="mode" value="0" checked>SDF
+                           <input type="radio" name="mode" value="1">MSDF
+                           <input type="radio" name="mode" value="2">MSDFA
+                       </form>
+                   </td>
+               </tr>
+               <tr>
+                   <th>Show Original Texture</th>
+                   <td>
+                       <form>
+                           <input type="checkbox" id="debug">
+                       </form>
+                   </td>
+               </tr>
+            </table>
+       </td>
+   </tr>
+</table>
+
+<hr>
+<%
+    std::string yearString = std::to_string(2017);
+    int year = Poco::DateTime().year();
+    if (year > 2017)
+    {
+        yearString += '-' + std::to_string(year);
+    }
+%>
+<pre>Powered by Tunis Font Packaging Service. Copyright (c) <%= yearString %> Mathieu-Andre Chiasson. ALL RIGHTS RESERVED.</pre>
+</body>
+</html>
+
+<script id="db" type="application/json"><%=TunisGoogleWebFontDB::getJSONDatabase()%></script>
+<script id="sdf-vertex" type="x-shader/x-vertex"><%=public_sdf_vert%></script>
+<script id="sdf-fragment" type="x-shader/x-fragment"><%=public_sdf_frag%></script>
+
+<script type="text/javascript">
+var font_family_select            = document.getElementById('font_family');
+var font_style_select             = document.getElementById('font_style');
+var font_size_select              = document.getElementById('font_size');
+var font_download_button          = document.getElementById('font_download');
+var font_scale                    = document.getElementById('scale');
+var font_translate_x              = document.getElementById('translateX');
+var font_translate_y              = document.getElementById('translateY');
+var font_rotate                   = document.getElementById('rotate');
+var font_outline_thickness        = document.getElementById('outlineThickness');
+var font_shadow_offset_x          = document.getElementById('shadowOffsetX');
+var font_shadow_offset_y          = document.getElementById('shadowOffsetY');
+var font_mode                     = document.getElementsByName('mode');
+var font_debug                    = document.getElementById('debug');
+var font_scale_output             = document.getElementsByName('scaleOutput')[0];
+var font_translate_x_output       = document.getElementsByName('translateXOutput')[0];
+var font_translate_y_output       = document.getElementsByName('translateYOutput')[0];
+var font_rotate_output            = document.getElementsByName('rotateOutput')[0];
+var font_outline_thickness_output = document.getElementsByName('outlineThicknessOutput')[0];
+var font_shadow_offset_x_output   = document.getElementsByName('shadowOffsetXOutput')[0];
+var font_shadow_offset_y_output   = document.getElementsByName('shadowOffsetYOutput')[0];
+var canvas                        = document.getElementById('webgl');
+var status_text                   = document.getElementById('status_text');
+var loader                        = document.getElementById('loader');
+var test_data                     = document.getElementById('test_data');
+var db                            = JSON.parse(document.getElementById('db').textContent);
+
+function setStatus(text, showLoader) {
+    status_text.firstChild.data = text;
+
+    if (showLoader) {
+        loader.style.display = 'block';
+    } else {
+        loader.style.display = 'none';
+    }
+}
+
+function getPrettyVariant(variant) {
+    if (variant === '100') return "Thin";
+    if (variant === '100italic') return "Thin Italic";
+    if (variant === '200') return "Extra-Light";
+    if (variant === '200italic') return "Extra-Light Italic";
+    if (variant === '300') return "Light";
+    if (variant === '300italic') return "Light Italic";
+    if (variant === 'regular') return "Regular";
+    if (variant === 'italic') return "Regular Italic";
+    if (variant === '500') return "Medium";
+    if (variant === '500italic') return "Medium Italic";
+    if (variant === '600') return "Semi-Bold";
+    if (variant === '600italic') return "Semi-Bold Italic";
+    if (variant === '700') return "Bold";
+    if (variant === '700italic') return "Bold Italic";
+    if (variant === '800') return "Extra-Bold";
+    if (variant === '800italic') return "Extra-Bold Italic";
+    if (variant === '900') return "Black";
+    if (variant === '900italic') return "Black Italic";
+    return variant; // should never happen, but we never know...
+}
+
+db.items.forEach(function (item) {
+    var font_family_option = document.createElement('option');
+    font_family_option.value = item.version;
+    font_family_option.text = item.family;
+    if (item.family === 'Open Sans')
+    {
+        font_family_option.selected = true;
+        item.variants.forEach(function (variant) {
+            var font_style_option = document.createElement('option');
+            font_style_option.value = variant;
+            font_style_option.text = getPrettyVariant(variant);
+            if (variant === 'regular')
+            {
+                font_style_option.selected = true;
+                font_download_button.action = item.files[variant];
+            }
+            font_style_select.add(font_style_option);
+        });
+    }
+    font_family_select.add(font_family_option);
+});
+
+for(var i = 8; i <= 128; i+=8)
+{
+    var font_size_option = document.createElement('option');
+    font_size_option.value = i;
+    font_size_option.text = i.toString() + 'px';
+    if (i == 32) font_size_option.selected = true;
+    font_size_select.add(font_size_option);
+}
+
+
+
+var pixelRatio = 'devicePixelRatio' in window ? devicePixelRatio : 1;
+
+if (devicePixelRatio > 1 && !canvas.scaled) {
+    pixelRatio = devicePixelRatio;
+    canvas.style.width = canvas.width + 'px';
+    canvas.width = canvas.width * pixelRatio;
+    canvas.style.height = canvas.height + 'px';
+    canvas.height = canvas.height * pixelRatio;
+    canvas.scaled = true;
+}
+
+var gl = canvas.getContext("experimental-webgl", { antialias: false });
+if (!gl) {
+    alert('Failed to initialize WebGL');
+}
+
+gl.getExtension("OES_standard_derivatives");
+
+// Initialize shaders
+var shader = gl.initializeShader("sdf",
+    ['a_pos', 'a_texcoord'],
+    ['u_matrix', 'u_texture', 'u_color', 'u_outlineThickness', 'u_outlineColor', 'u_shadowOffset', 'u_shadowColor', 'u_debug', 'u_mode']);
+
+gl.useProgram(shader.program);
+gl.enableVertexAttribArray(shader.a_pos);
+gl.enableVertexAttribArray(shader.a_texcoord);
+
+var pMatrix = mat4.create();
+mat4.ortho(pMatrix, 0, gl.canvas.width, gl.canvas.height, 0, 0, -1);
+
+gl.blendFuncSeparate(
+    gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA,
+    gl.ONE, gl.ONE);
+
+gl.enable(gl.BLEND);
+
+var texture = gl.createTexture();
+
+var vertexBuffer = gl.createBuffer();
+var textureBuffer = gl.createBuffer();
+
+function updateMesh(x, y, width, height) {
+    var hw = width * 0.5;
+    var hh = height * 0.5;
+
+    var vertexElements = [
+        x-hw, y-hh,
+        x-hw, y+hh,
+        x+hw, y+hh,
+        x+hw, y+hh,
+        x+hw, y-hh,
+        x-hw, y-hh,
+    ];
+    var textureElements = [
+          0, 0,
+          0, 255,
+        255, 255,
+        255, 255,
+        255, 0,
+          0, 0,
+    ];
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexElements), gl.STREAM_DRAW);
+    vertexBuffer.numItems = vertexElements.length / 2;
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, textureBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Uint8Array(textureElements), gl.STREAM_DRAW);
+    textureBuffer.numItems = textureElements.length / 2;
+}
+
+function loadImage(url, done) {
+    var img = new Image();
+    img.onload = function() { done(img); };
+    img.onerror = function() {
+        var font_family = font_family_select.options[font_family_select.selectedIndex];
+        var font_style = font_style_select.options[font_style_select.selectedIndex];
+        var font_size = font_size_select.options[font_size_select.selectedIndex];
+        setStatus("Error loading " + font_family.text + " " + font_style.text + " " + font_size.text + " atlas!" , false);
+    };
+    img.src = url;
+}
+
+var font_atlas_width      = 0;
+var font_atlas_height     = 0;
+
+function loadGlyphAtlas() {
+
+    var font_family = font_family_select.options[font_family_select.selectedIndex];
+    var font_style = font_style_select.options[font_style_select.selectedIndex];
+    var font_size = font_size_select.options[font_size_select.selectedIndex];
+
+    var url = "/atlas?family=" + font_family.text
+            + "&version=" + font_family.value
+            + "&style=" + font_style.value
+            + "&mode=msdfa"
+            + "&size=" + font_size.value
+
+    setStatus("Loading " + font_family.text + " " + font_style.text + " " + font_size.text + " atlas..." , true);
+
+    loadImage(url, function(atlas) {
+
+        font_atlas_width  = atlas.width;
+        font_atlas_height = atlas.height;
+
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, atlas);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+        setStatus("Ready!", false);
+
+        draw();
+    });
+}
+
+loadGlyphAtlas();
+
+function draw() {
+    gl.clearColor(0.9, 0.9, 0.9, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    var scale            = +font_scale.value;
+    var translateX       = +font_translate_x.value;
+    var translateY       = +font_translate_y.value;
+    var rotate           = +font_rotate.value;
+    var outlineThickness = +font_outline_thickness.value;
+    var shadowOffsetX    = +font_shadow_offset_x.value;
+    var shadowOffsetY    = +font_shadow_offset_y.value;
+    var debug            = +font_debug.checked;
+
+    var mode = 0;
+    for (var i = 0, length = font_mode.length; i < length; i++) {
+        if (font_mode[i].checked) {
+            mode = +font_mode[i].value;
+            break;
+        }
+    }
+
+    font_scale_output.value             = parseFloat(Math.round(scale * 100) / 100).toFixed(2);
+    font_translate_x_output.value       = parseFloat(Math.round(translateX * 1000) / 1000).toFixed(3);
+    font_translate_y_output.value       = parseFloat(Math.round(translateY * 1000) / 1000).toFixed(3);
+    font_rotate_output.value            = parseFloat(Math.round(rotate * 100) / 100).toFixed(2);
+    font_outline_thickness_output.value = parseFloat(Math.round(outlineThickness * 100) / 100).toFixed(2);
+    font_shadow_offset_x_output.value   = parseFloat(Math.round(shadowOffsetX * 10) / 10).toFixed(1);
+    font_shadow_offset_y_output.value   = parseFloat(Math.round(shadowOffsetY * 10) / 10).toFixed(1);
+
+    // some pre-adjustment for the shader
+    scale /= font_size_select.options[font_size_select.selectedIndex].value;
+    shadowOffsetX /= 1000.0;
+    shadowOffsetY /= 1000.0;
+    translateX *= font_atlas_width * scale;
+    translateY *= font_atlas_height * scale;
+
+    updateMesh(translateX, translateY, font_atlas_width*scale, font_atlas_height*scale);
+
+    var mvMatrix = mat4.create();
+    mat4.identity(mvMatrix);
+    mat4.translate(mvMatrix, mvMatrix, [ canvas.width*0.5, canvas.height*0.5, 0 ]);
+    mat4.rotateZ(mvMatrix, mvMatrix, rotate);
+
+    var mvpMatrix = mat4.create();
+    mat4.multiply(mvpMatrix, pMatrix, mvMatrix);
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+    gl.vertexAttribPointer(shader.a_pos, 2, gl.FLOAT, false, 0, 0);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, textureBuffer);
+    gl.vertexAttribPointer(shader.a_texcoord, 2, gl.UNSIGNED_BYTE, true, 0, 0);
+
+    gl.uniformMatrix4fv(shader.u_matrix, false, mvpMatrix);
+    gl.uniform1i(shader.u_texture, 0);
+    gl.uniform4fv(shader.u_color, [1, 1, 1, 1]);
+    gl.uniform1f(shader.u_outlineThickness, outlineThickness);
+    gl.uniform4fv(shader.u_outlineColor, [0.75, 0, 0, 1]);
+    gl.uniform2fv(shader.u_shadowOffset, [shadowOffsetX, shadowOffsetY]);
+    gl.uniform4fv(shader.u_shadowColor, [0, 0, 0, 1]);
+    gl.uniform1f(shader.u_debug, debug ? 1 : 0);
+    gl.uniform1f(shader.u_mode, mode);
+
+    gl.drawArrays(gl.TRIANGLES, 0, vertexBuffer.numItems);
+}
+
+font_family_select.onchange = function() {
+    var id = font_family_select.options[font_family_select.selectedIndex].value;
+    db.items.forEach(function (item) {
+        if (id === item.id)
+        {
+            for(vari = font_style_select.options.length - 1 ; i >= 0 ; i--)
+            {
+                font_style_select.remove(i);
+            }
+            item.variants.forEach(function (variant) {
+                var font_style_option = document.createElement('option');
+                font_style_option.value = variant;
+                font_style_option.text = getPrettyVariant(variant);
+                if (variant === 'regular')
+                {
+                    font_style_option.selected = true;
+                    font_download_button.action = item.files[variant];
+                }
+                font_style_select.add(font_style_option);
+            });
+            loadGlyphAtlas();
+        }
+    });
+};
+font_style_select.onchange = loadGlyphAtlas;
+font_size_select.onchange = loadGlyphAtlas;
+font_scale.oninput = draw;
+font_translate_x.oninput = draw;
+font_translate_y.oninput = draw;
+font_rotate.oninput = draw;
+font_outline_thickness.oninput = draw;
+font_shadow_offset_x.oninput = draw;
+font_shadow_offset_y.oninput = draw;
+for (var i = 0, length = font_mode.length; i < length; i++) {
+    font_mode[i].onclick = draw;
+}
+document.getElementById('debug').onclick = draw;
+
+</script>

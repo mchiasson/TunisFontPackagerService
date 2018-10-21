@@ -21,53 +21,35 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-#include <iostream>
+#ifndef KTDHTTPREQUESTHANDLER_H
+#define KTDHTTPREQUESTHANDLER_H
 
-#include <Poco/Util/ServerApplication.h>
-#include <Poco/Net/ServerSocket.h>
-#include <Poco/Net/HTTPServer.h>
-#include <Poco/LogStream.h>
+#include <Poco/Net/HTTPRequestHandler.h>
 
-#include "http/TunisHTTPRequestHandlerFactory.h"
-
-using namespace Poco;
-using namespace Poco::Util;
-using namespace Poco::Net;
-
-class TunisFontPackagingService : public ServerApplication
+class TunisHTTPRequestHandler : public Poco::Net::HTTPRequestHandler
 {
 protected:
-
-    virtual int main(const std::vector<std::string> &args) override
+    enum GlyphMode
     {
-        LogStream log(Poco::Logger::get("logger"));
+        GLYPH_MODE_INVALID,
+        GLYPH_MODE_SDF,
+        GLYPH_MODE_SDF_TEST,
+        GLYPH_MODE_MSDF,
+        GLYPH_MODE_MSDF_TEST,
+        GLYPH_MODE_MSDFA,
+        GLYPH_MODE_MSDFA_TEST,
+    };
 
-        UInt16 port = 3000;
-        if (args.size() > 0)
-        {
-            port = static_cast<UInt16>(std::stoi(args[0]));
-        }
+    void sendError(Poco::Net::HTTPServerResponse& response, int status, const std::string &reason);
+    virtual void handleRequest(Poco::Net::HTTPServerRequest& request, Poco::Net::HTTPServerResponse& response) = 0;
+    virtual void writeUsage(std::ostream &os) = 0;
 
-        ServerSocket socket(port);
+    int parseUnicodeParam(const std::string &unicodeParam);
+    int parseIntegerParam(const std::string &numberParam);
+    GlyphMode parseModeParam(const std::string &mode);
 
-        HTTPServerParams *pParams = new HTTPServerParams();
-        pParams->setMaxQueued(100);
-        pParams->setMaxThreads(16);
-
-        HTTPServer server(new TunisHTTPRequestHandlerFactory(), socket, pParams);
-
-        log.notice() << "Starting HTTP server on port " << port << std::endl;
-        server.start();
-
-        waitForTerminationRequest();
-
-        log.notice() << "Shutting down server" << std::endl;
-
-        server.stop();
-
-        return EXIT_OK;
-    }
+    static std::string GenerateDisclaimerString();
 
 };
 
-POCO_SERVER_MAIN(TunisFontPackagingService)
+#endif // KTDHTTPREQUESTHANDLER_H

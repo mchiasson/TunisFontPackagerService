@@ -22,17 +22,28 @@
 # SOFTWARE.
 ##
 
-hunter_config(msdfgen
-    URL https://github.com/mchiasson/msdfgen/archive/v1.5-p0.tar.gz
-    SHA1 6ada9bd6e4859753d6683c8afe8eb576c9e265ad
-)
-
-hunter_config(PocoCpp 
-    VERSION
-        1.7.9-p1
-    CMAKE_ARGS
-        ENABLE_NETSSL=ON
-        ENABLE_CRYPTO=ON
-        ENABLE_PAGECOMPILER=ON
-        ENABLE_PAGECOMPILER_FILE2PAGE=ON
-)
+# Function to handle C++ server pages code generation
+# It basically calls the cpspc tool from the Poco libraries and generates
+# the corresponding .cpp and .h file in the build directory
+# Adapted from http://www.cmake.org/pipermail/cmake/2010-June/037733.html
+function(preprocess_cpsp out_var)
+  set(result)
+  find_program(POCO_CPSPC_EXECUTABLE cpspc HINTS ${Poco_DIR}/../../../bin)
+  foreach(file ${ARGN})
+    get_filename_component(basename ${file} NAME_WE)
+    set(cpsp "${CMAKE_CURRENT_SOURCE_DIR}/${file}")
+    set(cpp  "${CMAKE_CURRENT_BINARY_DIR}/${basename}.cpp")
+    set(h    "${CMAKE_CURRENT_BINARY_DIR}/${basename}.h")
+    add_custom_command(OUTPUT ${cpp} ${h}
+        COMMAND ${POCO_CPSPC_EXECUTABLE} -o ${CMAKE_CURRENT_BINARY_DIR} ${cpsp}
+        DEPENDS ${cpsp}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        COMMENT "Preprocessing ${file}"
+        VERBATIM
+    )
+    set_source_files_properties(${cpp} PROPERTIES GENERATED 1)
+    set_source_files_properties(${h}   PROPERTIES GENERATED 1)
+    list(APPEND result ${cpp} ${h})
+  endforeach()
+  set(${out_var} "${result}" PARENT_SCOPE)
+endfunction()
