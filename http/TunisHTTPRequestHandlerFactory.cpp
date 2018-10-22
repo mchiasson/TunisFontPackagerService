@@ -30,7 +30,7 @@
 #include "TunisHTTPFontRequestHandler.h"
 #include "TunisHTTPRootRequestHandler.h"
 
-#include "TunisFontRequestHandler.h"
+#include "http/views/TunisFontRequestHandler.h"
 
 #include <Poco/Net/HTTPServerRequest.h>
 #include <Poco/Net/HTTPServerRequestImpl.h>

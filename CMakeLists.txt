@@ -68,9 +68,36 @@ if (TARGET OpenMP::OpenMP_CXX)
 endif()
 
 ##
+# Compile .cpsp files
+##
+file(GLOB PAGES_IN RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "http/views/*.cpsp")
+include(cpsp)
+cpsp(PAGES_OUT ${PAGES_IN})
+
+##
+# Compile .fbs
+##
+file(GLOB FBS_IN RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "schema/*.fbs")
+include(flatc)
+flatc(FBS_OUT ${FBS_IN})
+add_custom_command(
+    OUTPUT  ${PROJECT_BINARY_DIR}/TunisSchema.c
+            ${PROJECT_BINARY_DIR}/TunisSchema.h
+    COMMAND ${CMAKE_COMMAND}
+            -Dresource_name=TunisSchema
+            -Dresource_dir=${PROJECT_BINARY_DIR}/schema
+            -Ddestination_dir=${PROJECT_BINARY_DIR}
+            -P ${PROJECT_SOURCE_DIR}/cmake/RCUtilCommand.cmake
+    DEPENDS ${FBS_OUT}
+)
+set_source_files_properties(${PROJECT_BINARY_DIR}/TunisSchema.c PROPERTIES GENERATED TRUE)
+set_source_files_properties(${PROJECT_BINARY_DIR}/TunisSchema.h PROPERTIES GENERATED TRUE)
+
+
+##
 # Generate embedded resources
 ##
-file(GLOB_RECURSE TUNIS_RC_FILES http/public/*)
+file(GLOB_RECURSE HTTP_PUBLIC_FILES http/public/*)
 add_custom_command(
     OUTPUT  ${PROJECT_BINARY_DIR}/TunisRC.c
             ${PROJECT_BINARY_DIR}/TunisRC.h
@@ -79,24 +106,10 @@ add_custom_command(
             -Dresource_dir=${PROJECT_SOURCE_DIR}/http/public
             -Ddestination_dir=${PROJECT_BINARY_DIR}
             -P ${PROJECT_SOURCE_DIR}/cmake/RCUtilCommand.cmake
-    DEPENDS ${TUNIS_RC_FILES}
+    DEPENDS ${HTTP_PUBLIC_FILES}
 )
 set_source_files_properties(${PROJECT_BINARY_DIR}/TunisRC.c PROPERTIES GENERATED TRUE)
 set_source_files_properties(${PROJECT_BINARY_DIR}/TunisRC.h PROPERTIES GENERATED TRUE)
-
-##
-# Compile .cpsp files
-##
-file(GLOB PAGES_IN RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "http/views/*.cpsp")
-include(preprocess_cpsp)
-preprocess_cpsp(PAGES_OUT ${PAGES_IN})
-
-##
-# Compile .fbs
-##
-file(GLOB FBS_IN RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "schema/*.fbs")
-include(flatc)
-flatc(FBS_OUT ${FBS_IN})
 
 add_executable(${PROJECT_NAME}
     main.cpp
@@ -143,9 +156,11 @@ add_executable(${PROJECT_NAME}
     ##
     ${FBS_IN}
     ${FBS_OUT}
+    ${PROJECT_BINARY_DIR}/TunisSchema.c
+    ${PROJECT_BINARY_DIR}/TunisSchema.h
 
     # Embedded HTTP public files
-    ${TUNIS_RC_FILES}
+    ${HTTP_PUBLIC_FILES}
     ${PROJECT_BINARY_DIR}/TunisRC.c
     ${PROJECT_BINARY_DIR}/TunisRC.h
 )

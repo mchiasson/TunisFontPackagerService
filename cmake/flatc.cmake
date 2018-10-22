@@ -27,18 +27,19 @@ function(flatc out_var)
     find_program(FLATC_EXECUTABLE flatc HINTS ${FLATBUFFERS_ROOT}/bin)
 
     foreach(file ${ARGN})
-      get_filename_component(basename ${file} NAME_WE)
-      set(schema "${CMAKE_CURRENT_SOURCE_DIR}/${file}")
-      set(h      "${CMAKE_CURRENT_BINARY_DIR}/${basename}_generated.h")
-      add_custom_command(OUTPUT ${h}
-          COMMAND ${FLATC_EXECUTABLE} --cpp --js ${schema}
-          DEPENDS ${schema}
-          WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-          COMMENT "Preprocessing ${file}"
-          VERBATIM
-      )
-      set_source_files_properties(${h} PROPERTIES GENERATED 1)
-      list(APPEND result ${h})
+        get_filename_component(basename ${file} NAME_WE)
+        get_filename_component(directory ${file} DIRECTORY)
+        set(schema "${CMAKE_CURRENT_SOURCE_DIR}/${file}")
+        set(h      "${CMAKE_CURRENT_BINARY_DIR}/${directory}/${basename}_generated.h")
+        add_custom_command(OUTPUT ${h}
+            COMMAND ${FLATC_EXECUTABLE} --cpp --js ${schema}
+            DEPENDS ${schema}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${directory}
+            COMMENT "Compiling ${file}"
+            VERBATIM
+            )
+        set_source_files_properties(${h} PROPERTIES GENERATED 1)
+        list(APPEND result ${h})
     endforeach()
 
     set(${out_var} "${result}" PARENT_SCOPE)

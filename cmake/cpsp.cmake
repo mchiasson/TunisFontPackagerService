@@ -26,19 +26,20 @@
 # It basically calls the cpspc tool from the Poco libraries and generates
 # the corresponding .cpp and .h file in the build directory
 # Adapted from http://www.cmake.org/pipermail/cmake/2010-June/037733.html
-function(preprocess_cpsp out_var)
+function(cpsp out_var)
   set(result)
   find_program(POCO_CPSPC_EXECUTABLE cpspc HINTS ${Poco_DIR}/../../../bin)
   foreach(file ${ARGN})
     get_filename_component(basename ${file} NAME_WE)
+    get_filename_component(directory ${file} DIRECTORY)
     set(cpsp "${CMAKE_CURRENT_SOURCE_DIR}/${file}")
-    set(cpp  "${CMAKE_CURRENT_BINARY_DIR}/${basename}.cpp")
-    set(h    "${CMAKE_CURRENT_BINARY_DIR}/${basename}.h")
+    set(cpp  "${CMAKE_CURRENT_BINARY_DIR}/${directory}/${basename}.cpp")
+    set(h    "${CMAKE_CURRENT_BINARY_DIR}/${directory}/${basename}.h")
     add_custom_command(OUTPUT ${cpp} ${h}
-        COMMAND ${POCO_CPSPC_EXECUTABLE} -o ${CMAKE_CURRENT_BINARY_DIR} ${cpsp}
+        COMMAND ${POCO_CPSPC_EXECUTABLE} -o ${CMAKE_CURRENT_BINARY_DIR}/${directory} ${cpsp}
         DEPENDS ${cpsp}
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-        COMMENT "Preprocessing ${file}"
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${directory}
+        COMMENT "Compiling ${file}"
         VERBATIM
     )
     set_source_files_properties(${cpp} PROPERTIES GENERATED 1)

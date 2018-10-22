@@ -39,7 +39,7 @@
 
 #include <cmath>
 
-#include "TunisFonts_generated.h"
+#include "schema/TunisFonts_generated.h"
 
 
 const char HEADER[] = {'K', 'F', 'N', 'T'};
