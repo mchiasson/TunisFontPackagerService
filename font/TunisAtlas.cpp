@@ -39,39 +39,11 @@
 
 #include <cmath>
 
+#include "TunisFonts_generated.h"
+
 
 const char HEADER[] = {'K', 'F', 'N', 'T'};
 
-struct FontBlock
-{
-    int16_t  fontSize;
-    uint8_t  padding;
-    uint8_t  margin;
-    uint16_t lineHeight;
-    uint16_t baseline;
-    uint16_t atlasWidth;
-    uint16_t atlasHeight;
-} __attribute__((packed, aligned(1)));
-
-struct GlyphBlock
-{
-    uint32_t unicode;
-    uint16_t x;
-    uint16_t y;
-    uint16_t width;
-    uint16_t height;
-    int16_t  xoffset;
-    int16_t  yoffset;
-    int16_t  xadvance;
-    int16_t  yadvance;
-}__attribute__((packed, aligned(1)));
-
-struct KerningPairBlock
-{
-    uint32_t first;
-    uint32_t second;
-    int16_t  amount;
-} __attribute__((packed, aligned(1)));
 
 static bool glyphSortTest(TunisGlyph lhs, TunisGlyph rhs)
 {
@@ -122,7 +94,7 @@ bool TunisAtlas::generate()
     std::vector<TunisGlyph> glyphs;
     int atlasWidth = 0;
     int atlasHeight = 0;
-    int padding = 0;
+    uint16_t padding = 0;
     int margin = 0;
 
     TunisFont font;
@@ -291,44 +263,38 @@ bool TunisAtlas::generate()
     TunisPNG atlasPNG(atlasBuffer, atlasWidth, atlasHeight, TunisPNG::RGBA);
     atlasPNG.store(msdfaAtlasFileName);
 
-#if 0
-
     std::string fontName = font.getFamily() + ' ' + font.getStyle().getName();
     const FT_Face face = font.getFace();
 
-    FontBlock fontBlock;
-    fontBlock.fontSize     = face->size->metrics.y_ppem;
-    fontBlock.padding      = padding;
-    fontBlock.margin       = margin;
-    fontBlock.lineHeight   = face->glyph->metrics.height/64;
-    fontBlock.baseline     = face->glyph->metrics.horiBearingY/64;
-    fontBlock.atlasWidth   = atlasWidth;
-    fontBlock.atlasHeight  = atlasHeight;
-    uint32_t fontBlockSize      = (uint32_t)sizeof(fontBlock) + fontName.length() + 1;
+    flatbuffers::FlatBufferBuilder builder;
 
-    std::vector<GlyphBlock> glyphBlocks(glyphs.size());
-    for (size_t i = 0; i < glyphBlocks.size(); ++i)
+    std::vector< flatbuffers::Offset<tunis::Glyph> > glyphBlock;
+
+    for (size_t i = 0; i < glyphs.size(); ++i)
     {
         const TunisGlyph &glyph = glyphs[i];
-        GlyphBlock &glyphBlock = glyphBlocks[i];
-        glyphBlock.unicode     = glyph.unicode;
-        glyphBlock.x           = glyph.atlasX;
-        glyphBlock.y           = glyph.atlasY;
-        glyphBlock.width       = glyph.texture_width;
-        glyphBlock.height      = glyph.texture_height;
-        glyphBlock.xadvance    = glyph.xadvance;
-        glyphBlock.yadvance    = glyph.yadvance;
-        glyphBlock.xoffset     = glyph.xoffset;
-        glyphBlock.yoffset     = glyph.yoffset;
-    }
-    uint32_t glyphBlockSize = (uint32_t)(sizeof(GlyphBlock) * glyphBlocks.size());
 
-    std::vector<KerningPairBlock> kerningPairBlocks;
+        std::ifstream infile(glyph.msdfaFileName, std::ios::binary | std::ios::in);
 
-    if (FT_HAS_KERNING(face))
-    {
-        for (size_t i = 0; i < glyphs.size(); ++i)
+        std::vector<uint8_t> imageBuffer;
+
+        //get length of file
+        infile.seekg(0, infile.end);
+        std::streamsize length = infile.tellg();
+        infile.seekg(0, infile.beg);
+
+        if (length > 0)
         {
+            imageBuffer.resize(length);
+            infile.read(reinterpret_cast<char*>(&imageBuffer[0]), length);
+        }
+        auto imageData = builder.CreateVector(imageBuffer.data(), imageBuffer.size());
+
+        std::vector<tunis::Kerning> kernings;
+
+        if (FT_HAS_KERNING(face))
+        {
+
             for (size_t j = 0; j < glyphs.size(); ++j)
             {
                 FT_Vector kerning;
@@ -343,104 +309,47 @@ bool TunisAtlas::generate()
 
                 if (kerning.x > 0)
                 {
-                    kerningPairBlocks.push_back(
-                    {
-                                    static_cast<uint32_t>(glyphs[i].unicode),
-                                    static_cast<uint32_t>(glyphs[j].unicode),
-                                    (int16_t)(kerning.x/64. + 0.5)
-                                });
+                    kernings.emplace_back(tunis::Kerning(glyphs[j].unicode, kerning.x/64.0f));
                 }
             }
         }
+
+        auto kerningVector = builder.CreateVectorOfStructs(kernings);
+
+        tunis::GlyphBuilder glyphBuilder(builder);
+        glyphBuilder.add_unicode(glyph.unicode);
+        glyphBuilder.add_width(glyph.texture_width);
+        glyphBuilder.add_height(glyph.texture_height);
+        glyphBuilder.add_xadvance(glyph.xadvance);
+        glyphBuilder.add_xoffset(glyph.xoffset);
+        glyphBuilder.add_yoffset(glyph.yoffset);
+        glyphBuilder.add_kernings(kerningVector);
+        glyphBuilder.add_image(imageData);
+        glyphBlock.push_back(glyphBuilder.Finish());
+
     }
 
-    uint32_t kerningPairBlockSize = (uint32_t)(sizeof(KerningPairBlock) * kerningPairBlocks.size());
-    std::ofstream binaryOutputFile(binaryFileName, std::ios::out | std::ios::binary);
+    auto familyString = builder.CreateString(family);
+    auto glyphVector = builder.CreateVector(glyphBlock.data(), glyphBlock.size());
 
-    // write the BMFont file header.
-    binaryOutputFile.write(HEADER, sizeof(HEADER));
+    tunis::FontBuilder fontBuilder(builder);
+    fontBuilder.add_family(familyString);
+    fontBuilder.add_style(static_cast<tunis::Style>(pStyle->getThickness() / 100));
+    fontBuilder.add_italic(pStyle->isItalic());
+    fontBuilder.add_fontSize(face->size->metrics.y_ppem);
+    fontBuilder.add_padding(padding);
+    fontBuilder.add_lineHeight(face->size->metrics.height/64.0f);
+    fontBuilder.add_glyphs(glyphVector);
+    auto fontData = fontBuilder.Finish();
 
-    char blockId[] = {0x01, 0x02, 0x03};
+    builder.Finish(fontData);
 
-    if (fontBlockSize > 0)
-    {
-        binaryOutputFile.write((char*)&blockId[0], 1); // Font Block ID
-        binaryOutputFile.write((char*)&fontBlockSize, 4);
-        binaryOutputFile.write((char*)&fontBlock, sizeof(fontBlock));
-        binaryOutputFile.write(fontName.c_str(), fontName.length()+1);
-    }
+    std::ofstream outfile;
+    outfile.open("fonts.tfp", std::ios::binary | std::ios::out);
+    outfile.write(reinterpret_cast<const char*>(builder.GetBufferPointer()),
+                  static_cast<std::streamsize>(builder.GetSize()));
+    outfile.close();
 
-    if (glyphBlockSize > 0)
-    {
-        binaryOutputFile.write((char*)&blockId[1], 1); // Glyph Block ID
-        binaryOutputFile.write((char*)&glyphBlockSize, 4);
-        binaryOutputFile.write((char*)&glyphBlocks.front(), glyphBlockSize);
-    }
-
-    if (kerningPairBlockSize > 0)
-    {
-        binaryOutputFile.write((char*)&blockId[2], 1); // Kerning Pairs Block ID
-        binaryOutputFile.write((char*)&kerningPairBlockSize, 4);
-        binaryOutputFile.write((char*)&kerningPairBlocks.front(), kerningPairBlockSize);
-    }
-
-    binaryOutputFile.close();
-
-    rapidjson::Document document;
-    document.SetObject();
-    rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
-
-    document.AddMember("fontFamily", rapidjson::StringRef(font.getFamily().c_str()), allocator);
-    document.AddMember("fontStyle", rapidjson::StringRef(font.getStyle().getName().c_str()), allocator);
-    document.AddMember("fontSize", fontBlock.fontSize, allocator);
-    document.AddMember("padding", fontBlock.padding, allocator);
-    document.AddMember("margin", fontBlock.margin, allocator);
-    document.AddMember("lineHeight", fontBlock.lineHeight, allocator);
-    document.AddMember("baseline", fontBlock.baseline, allocator);
-    document.AddMember("atlasWidth", fontBlock.atlasWidth, allocator);
-    document.AddMember("atlasHeight", fontBlock.atlasHeight, allocator);
-
-    rapidjson::Value glyphMap(rapidjson::kObjectType);
-    for(size_t i = 0; i < glyphBlocks.size(); ++i)
-    {
-        const GlyphBlock &glyphBlock = glyphBlocks[i];
-        rapidjson::Value glyphObject(rapidjson::kObjectType);
-        glyphObject.AddMember("x", glyphBlock.x, allocator);
-        glyphObject.AddMember("y", glyphBlock.y, allocator);
-        glyphObject.AddMember("width", glyphBlock.width, allocator);
-        glyphObject.AddMember("height", glyphBlock.height, allocator);
-        glyphObject.AddMember("xoffset", glyphBlock.xoffset, allocator);
-        glyphObject.AddMember("yoffset", glyphBlock.yoffset, allocator);
-        glyphObject.AddMember("xadvance", glyphBlock.xadvance, allocator);
-        glyphObject.AddMember("yadvance", glyphBlock.yadvance, allocator);
-        std::string unicodeStr = std::to_string(glyphBlock.unicode);
-        rapidjson::Value member(unicodeStr.c_str(), unicodeStr.size(), allocator);
-        glyphMap.AddMember(member, glyphObject, allocator);
-    }
-    document.AddMember("glyphs", glyphMap, allocator);
-
-    rapidjson::Value kerningPairArray(rapidjson::kArrayType);
-    for(size_t i = 0; i < kerningPairBlocks.size(); ++i)
-    {
-        const KerningPairBlock &kerningPairBlock = kerningPairBlocks[i];
-        rapidjson::Value kerningObject(rapidjson::kObjectType);
-        kerningObject.AddMember("first", kerningPairBlock.first, allocator);
-        kerningObject.AddMember("second", kerningPairBlock.second, allocator);
-        kerningObject.AddMember("amount", kerningPairBlock.amount, allocator);
-        kerningPairArray.PushBack(kerningObject, allocator);
-    }
-    document.AddMember("kerningPairs", kerningPairArray, allocator);
-
-    rapidjson::StringBuffer strbuf;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(strbuf);
-    document.Accept(writer);
-
-    std::string json(strbuf.GetString());
-
-    std::ofstream jsonOutputFile(Poco::replace(jsonFileName, ".kfnt", ".json"));
-    jsonOutputFile << json;
-    jsonOutputFile.close();
-#endif
 
     return true;
 }

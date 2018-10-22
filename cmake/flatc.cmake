@@ -22,25 +22,25 @@
 # SOFTWARE.
 ##
 
-hunter_config(flatbuffers
-    VERSION
-        1.8.0-p1
-    CMAKE_ARGS
-        FLATBUFFERS_BUILD_FLATC=ON
-        FLATBUFFERS_BUILD_FLATHASH=ON
-)
+function(flatc out_var)
 
-hunter_config(msdfgen
-    URL https://github.com/mchiasson/msdfgen/archive/v1.5-p0.tar.gz
-    SHA1 6ada9bd6e4859753d6683c8afe8eb576c9e265ad
-)
+    find_program(FLATC_EXECUTABLE flatc HINTS ${FLATBUFFERS_ROOT}/bin)
 
-hunter_config(PocoCpp 
-    VERSION
-        1.7.9-p1
-    CMAKE_ARGS
-        ENABLE_NETSSL=ON
-        ENABLE_CRYPTO=ON
-        ENABLE_PAGECOMPILER=ON
-        ENABLE_PAGECOMPILER_FILE2PAGE=ON
-)
+    foreach(file ${ARGN})
+      get_filename_component(basename ${file} NAME_WE)
+      set(schema "${CMAKE_CURRENT_SOURCE_DIR}/${file}")
+      set(h      "${CMAKE_CURRENT_BINARY_DIR}/${basename}_generated.h")
+      add_custom_command(OUTPUT ${h}
+          COMMAND ${FLATC_EXECUTABLE} --cpp --js ${schema}
+          DEPENDS ${schema}
+          WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+          COMMENT "Preprocessing ${file}"
+          VERBATIM
+      )
+      set_source_files_properties(${h} PROPERTIES GENERATED 1)
+      list(APPEND result ${h})
+    endforeach()
+
+    set(${out_var} "${result}" PARENT_SCOPE)
+
+endfunction()

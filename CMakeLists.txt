@@ -42,13 +42,14 @@ hunter_add_package(PocoCpp)
 hunter_add_package(OpenSSL)
 hunter_add_package(RapidJSON)
 hunter_add_package(PNG)
-
+hunter_add_package(flatbuffers)
 
 find_package(msdfgen CONFIG REQUIRED)
 find_package(Poco REQUIRED NetSSL CONFIG)
 find_package(OpenSSL REQUIRED)
 find_package(RapidJSON CONFIG REQUIRED)
 find_package(PNG CONFIG REQUIRED)
+find_package(Flatbuffers CONFIG REQUIRED)
 find_package(OpenMP)
 
 list(APPEND deps
@@ -59,6 +60,7 @@ list(APPEND deps
     OpenSSL::Crypto
     RapidJSON::rapidjson
     PNG::png
+    flatbuffers::flatbuffers
 )
 
 if (TARGET OpenMP::OpenMP_CXX)
@@ -83,11 +85,18 @@ set_source_files_properties(${PROJECT_BINARY_DIR}/TunisRC.c PROPERTIES GENERATED
 set_source_files_properties(${PROJECT_BINARY_DIR}/TunisRC.h PROPERTIES GENERATED TRUE)
 
 ##
-# Compile .cpsp files to .cpp
+# Compile .cpsp files
 ##
 file(GLOB PAGES_IN RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "http/views/*.cpsp")
 include(preprocess_cpsp)
 preprocess_cpsp(PAGES_OUT ${PAGES_IN})
+
+##
+# Compile .fbs
+##
+file(GLOB FBS_IN RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "schema/*.fbs")
+include(flatc)
+flatc(FBS_OUT ${FBS_IN})
 
 add_executable(${PROJECT_NAME}
     main.cpp
@@ -128,6 +137,12 @@ add_executable(${PROJECT_NAME}
     ##
     ${PAGES_IN}
     ${PAGES_OUT}
+
+    ##
+    # Generated Flatbuffers schema
+    ##
+    ${FBS_IN}
+    ${FBS_OUT}
 
     # Embedded HTTP public files
     ${TUNIS_RC_FILES}

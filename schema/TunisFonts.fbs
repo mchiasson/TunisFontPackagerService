@@ -21,30 +21,48 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-#ifndef KTDGLYPH_H
-#define KTDGLYPH_H
 
-#include <string>
+namespace tunis;
 
-struct TunisGlyph
+enum Style : byte { 
+    Invalid = 0,
+    Thin,
+    ExtraLight,
+    Light,
+    Regular,
+    Medium,
+    SemiBold,
+    Bold,
+    ExtraBold,
+    Black
+} 
+
+struct Kerning
 {
-    uint32_t unicode = 0;
-    int fontSize = 0;
-    int width = 0;
-    int height = 0;
-    int padding = 0;
-    int texture_width = 0;
-    int texture_height = 0;
-    float xadvance = 0.0;
-    float yadvance = 0.0;
-    float xoffset = 0.0;
-    float yoffset = 0.0;
-    int atlasX = 0;
-    int atlasY = 0;
+    unicode:uint32 = 0;
+    offset:float = 0.0;
+}
 
-    std::string sdfFileName;
-    std::string msdfFileName;
-    std::string msdfaFileName;
-};
+table Glyph
+{
+    unicode:uint32 = 0;
+    width:uint8 = 0;
+    height:uint8 = 0;
+    xadvance:float = 0.0;
+    xoffset:float = 0.0;
+    yoffset:float = 0.0;
+    kernings:[Kerning];
+    image:[uint8];
+}
 
-#endif // KTDGLYPH_H
+table Font {
+    family:string;
+    style:Style = Invalid;
+    italic:bool = false;
+    fontSize:uint16 = 0;
+    padding:uint16 = 0;
+    lineHeight:float = 0;
+    glyphs:[Glyph];
+}
+
+root_type Font;
