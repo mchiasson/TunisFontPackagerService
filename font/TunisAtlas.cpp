@@ -65,17 +65,14 @@ static size_t getNearestPowerOfTwo(size_t value)
     return ++value;
 }
 
-TunisAtlas::TunisAtlas(const std::string &family, const std::string &style, const std::string &version, int fontSize) :
+TunisAtlas::TunisAtlas(const std::string &family, const std::string &style, int fontSize) :
     family(family),
     pStyle(&TunisFontStyle::GetStyleByName(style)),
-    version(version),
     fontSize(fontSize)
 
 {
     atlasPath =
             Poco::remove(Poco::toLower(family), ' ')
-            + Poco::Path::separator()
-            + version
             + Poco::Path::separator()
             + pStyle->getAlternateName()
             + Poco::Path::separator()
@@ -98,7 +95,7 @@ bool TunisAtlas::generate()
     int margin = 0;
 
     TunisFont font;
-    if (!TunisFontDB::loadFont(font, family, *pStyle, version))
+    if (!TunisFontDB::loadFont(font, family, *pStyle))
     {
         return false;
     }
@@ -345,7 +342,7 @@ bool TunisAtlas::generate()
     builder.Finish(fontData);
 
     std::ofstream outfile;
-    outfile.open("fonts.tfp", std::ios::binary | std::ios::out);
+    outfile.open(atlasPath + "font.tfp", std::ios::binary | std::ios::out);
     outfile.write(reinterpret_cast<const char*>(builder.GetBufferPointer()),
                   static_cast<std::streamsize>(builder.GetSize()));
     outfile.close();

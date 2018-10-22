@@ -31,7 +31,7 @@ class TunisFontStyle;
 class TunisAtlas
 {
 public:
-    TunisAtlas(const std::string &family, const std::string &style, const std::string &version, int fontSize);
+    TunisAtlas(const std::string &family, const std::string &style, int fontSize);
 
     inline const std::string &getAtlasPath() const { return atlasPath; }
     inline const std::string &getsdfAtlasFileName() const { return sdfAtlasFileName; }
@@ -44,7 +44,6 @@ private:
 
     std::string family;
     const TunisFontStyle *pStyle;
-    std::string version;
     int fontSize;
 
     std::string atlasPath;

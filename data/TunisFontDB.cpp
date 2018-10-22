@@ -82,18 +82,16 @@ static int ftCubicTo(const FT_Vector *control1, const FT_Vector *control2, const
     return 0;
 }
 
-bool TunisFontDB::loadFont(TunisFont &font, const std::string &family, const TunisFontStyle &style, const std::string &version)
+bool TunisFontDB::loadFont(TunisFont &font, const std::string &family, const TunisFontStyle &style)
 {
     Poco::LogStream log(Poco::Logger::get("TunisFontDB::loadFont"));
 
-    std::string url = TunisGoogleWebFontDB::findFontURL(family, style.getAlternateName(), version);
+    std::string url = TunisGoogleWebFontDB::findFontURL(family, style.getAlternateName());
     if (url.length() > 0)
     {
         log.notice() << "Downloading " << family << "-" << style.getName() << " at " << url << std::endl;
         std::string path =
                 Poco::remove(Poco::toLower(family), ' ')
-                + Poco::Path::separator()
-                + version
                 + Poco::Path::separator()
                 + style.getAlternateName()
                 + Poco::Path::separator();
@@ -108,7 +106,6 @@ bool TunisFontDB::loadFont(TunisFont &font, const std::string &family, const Tun
 
         if (bDownloadSuccess)
         {
-            font.m_version = version;
             font.m_family = family;
             font.m_style = style;
             font.setFileName(fileName);
@@ -159,8 +156,6 @@ bool TunisFontDB::loadGlyph(TunisFont &font, int unicodes[], size_t unicodeCount
 
         std::string path =
                 Poco::remove(Poco::toLower(font.m_family), ' ')
-                + Poco::Path::separator()
-                + font.m_version
                 + Poco::Path::separator()
                 + font.m_style.getAlternateName()
                 + Poco::Path::separator()

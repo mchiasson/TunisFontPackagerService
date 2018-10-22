@@ -30,7 +30,7 @@
 class TunisFontDB
 {
 public:
-    static bool loadFont(TunisFont &font, const std::string &family, const TunisFontStyle &style, const std::string &version);
+    static bool loadFont(TunisFont &font, const std::string &family, const TunisFontStyle &style);
     static bool loadGlyph(TunisFont &font, int unicodes[], size_t unicodeCount, int fontSize);
 };
 

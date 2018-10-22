@@ -71,7 +71,7 @@ void TunisHTTPGlyphAnalyzerRequestHandler::handleRequest(Poco::Net::HTTPServerRe
     int unicodeValue = parseUnicodeParam(unicode);
 
     TunisFont font;
-    TunisFontDB::loadFont(font, family, TunisFontStyle::GetStyleByName(style), version);
+    TunisFontDB::loadFont(font, family, TunisFontStyle::GetStyleByName(style));
 
     response.setContentType("text/html");
     std::ostream &os = response.send();

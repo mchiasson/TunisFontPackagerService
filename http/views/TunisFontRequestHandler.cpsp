@@ -2,6 +2,7 @@
 <%!
     #include "data/TunisGoogleWebFontDB.h"
     #include "TunisRC.h"
+    #include "TunisSchema.h"
     #include <Poco/DateTime.h>
 %>
 <!--
@@ -35,6 +36,7 @@
 <title>Tunis Font Packaging Service</title>
 <script src="glutil.js"></script>
 <script src="glmatrix.js"></script>
+<script src="TunisFonts_generated.js"></script>
 <style>
 canvas {
     border:1px solid black;
@@ -506,7 +508,7 @@ font_family_select.onchange = function() {
     db.items.forEach(function (item) {
         if (id === item.id)
         {
-            for(vari = font_style_select.options.length - 1 ; i >= 0 ; i--)
+            for(var i = font_style_select.options.length - 1 ; i >= 0 ; i--)
             {
                 font_style_select.remove(i);
             }

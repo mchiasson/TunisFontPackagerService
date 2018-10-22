@@ -86,7 +86,7 @@ std::string TunisGoogleWebFontDB::getJSONDatabase()
     return json;
 }
 
-std::string TunisGoogleWebFontDB::findFontURL(const std::string &family, const std::string &style, const std::string &version)
+std::string TunisGoogleWebFontDB::findFontURL(const std::string &family, const std::string &style)
 {
     std::string url;
 
@@ -115,9 +115,8 @@ std::string TunisGoogleWebFontDB::findFontURL(const std::string &family, const s
         {
             const rapidjson::Value &item = items[itemId];
             std::string candidateFamily = item["family"].GetString();
-            std::string candidateVersion = item["version"].GetString();
 
-            if (family == candidateFamily && version == candidateVersion)
+            if (family == candidateFamily)
             {
                 const rapidjson::Value &files = item["files"];
                 if (files.HasMember(style.c_str()))

@@ -79,7 +79,7 @@ void TunisHTTPAtlasRequestHandler::handleRequest(Poco::Net::HTTPServerRequest& r
 
     std::string format = form.get("format", "png");
 
-    TunisAtlas atlas(family, style, version, size);
+    TunisAtlas atlas(family, style, size);
 
 #if !defined(NDEBUG)
     response.set("Cache-Control", "no-cache, no-store, must-revalidate");

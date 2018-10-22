@@ -80,7 +80,7 @@ void TunisHTTPFontRequestHandler::handleRequest(Poco::Net::HTTPServerRequest& re
     std::string version =  form.get("version");
 
     TunisFont font;
-    if (TunisFontDB::loadFont(font, family, TunisFontStyle::GetStyleByName(style), version))
+    if (TunisFontDB::loadFont(font, family, TunisFontStyle::GetStyleByName(style)))
     {
 #if !defined(NDEBUG)
         response.set("Cache-Control", "no-cache, no-store, must-revalidate");

@@ -31,6 +31,7 @@
 #include "TunisHTTPRootRequestHandler.h"
 
 #include "http/views/TunisFontRequestHandler.h"
+#include "http/views/TunisGeneratorRequestHandler.h"
 
 #include <Poco/Net/HTTPServerRequest.h>
 #include <Poco/Net/HTTPServerRequestImpl.h>
@@ -46,8 +47,9 @@ Poco::Net::HTTPRequestHandler * TunisHTTPRequestHandlerFactory::createRequestHan
     log.notice() << "received request " << (bSecure?"https://":"http://") << request.getHost() << request.getURI() << " from " << request.clientAddress().toString() << std::endl;
 
     Poco::RegularExpression reRoot         ("^\\/(\\?.*)?$");            // starts with either / or /?
-    Poco::RegularExpression reFont         ("^\\/(\\w+)(\\?.*)?$");        // starts with either /<fontfamily> or /<fontfamily>?
+    Poco::RegularExpression reFontFamily   ("^\\/(\\w+)(\\?.*)?$");      // starts with either /<fontfamily> or /<fontfamily>?
     Poco::RegularExpression reAtlas        ("^\\/atlas\\??.*$");         // starts with either /atlas or /atlas?
+    Poco::RegularExpression reFontAnalyzer ("^\\/FontAnalyzer\\??.*$");  // starts with either /FontAnalyzer or /FontAnalyzer?
     Poco::RegularExpression reGlyph        ("^\\/glyph\\??.*$");         // starts with either /glyph or /glyph?
     Poco::RegularExpression reGlyphAnalyzer("^\\/GlyphAnalyzer\\??.*$"); // starts with either /GlyphAnalyzer or /GlyphAnalyzer?
 
@@ -65,12 +67,15 @@ Poco::Net::HTTPRequestHandler * TunisHTTPRequestHandlerFactory::createRequestHan
     {
         return new TunisHTTPGlyphRequestHandler();
     }
-    else if(reRoot.match(request.getURI()))
+    else if(reFontAnalyzer.match(request.getURI()))
     {
-//        return new TunisHTTPRootRequestHandler();
         return new TunisFontRequestHandler();
     }
-    else if(reFont.split(request.getURI(), groups))
+    else if(reRoot.match(request.getURI()))
+    {
+        return new TunisGeneratorRequestHandler();
+    }
+    else if(reFontFamily.split(request.getURI(), groups))
     {
         return new TunisHTTPFontRequestHandler(groups[1]);
     }

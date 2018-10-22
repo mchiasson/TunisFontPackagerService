@@ -46,7 +46,7 @@ class TunisGoogleWebFontDB
 public:
 
     static std::string getJSONDatabase();
-    static std::string findFontURL(const std::string &family, const std::string &style, const std::string &version);
+    static std::string findFontURL(const std::string &family, const std::string &style);
     static std::vector<WebFont> getFontList();
 
 };

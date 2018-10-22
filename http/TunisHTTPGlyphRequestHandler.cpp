@@ -106,7 +106,7 @@ void TunisHTTPGlyphRequestHandler::handleRequest(Poco::Net::HTTPServerRequest& r
 
     // first load the font from the database.
     TunisFont font;
-    if (!TunisFontDB::loadFont(font, family, TunisFontStyle::GetStyleByName(style), version))
+    if (!TunisFontDB::loadFont(font, family, TunisFontStyle::GetStyleByName(style)))
     {
         std::stringstream reason;
         reason << "Could not find font '" << form.get("family") << "' with style '" << form.get("style") << "'";

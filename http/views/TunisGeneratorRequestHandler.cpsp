@@ -1,0 +1,155 @@
+<%@ page class="TunisGeneratorRequestHandler" %>
+<%!
+    #include "data/TunisGoogleWebFontDB.h"
+    #include "TunisRC.h"
+    #include "TunisSchema.h"
+    #include <Poco/DateTime.h>
+%>
+<!--
+ MIT License
+
+ Copyright (c) 2017-2018 Mathieu-Andre Chiasson
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+-->
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta charset="utf-8">
+<title>Tunis Font Packaging Service</title>
+<script src="TunisFonts_generated.js"></script>
+<style>
+canvas {
+    border:1px solid black;
+}
+
+table {
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 4px;
+}
+
+table.glcontrol, table.glcontrol th, table.glcontrol td {
+    border: 1px solid grey;
+}
+
+input[type=range] {
+    width: 500px; /* Specific width is required for Firefox. */
+}
+
+.loader {
+    border: 8px solid #f3f3f3;
+    border-radius: 50%;
+    border-top: 8px solid #737373;
+    width: 16px;
+    height: 16px;
+    -webkit-animation: spin 1s linear infinite;
+    animation: spin 1s linear infinite;
+    display: 'none'; /* hidden by default */
+}
+
+@-webkit-keyframes spin {
+  0% { -webkit-transform: rotate(0deg); }
+  100% { -webkit-transform: rotate(360deg); }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+</style>
+
+</head>
+<body>
+
+<table>
+    <tr>
+        <td>Font Family</td>
+        <td><select id="font_family" name="font_family"/></td>
+    </tr>
+    <tr>
+        <td>Font Size</td>
+        <td><select id="font_size" name="font_size"/></td>
+    </tr>
+    <tr>
+        <td>
+            <form id="font_generate" method="post">
+                <button type="submit">Generate</button>
+            </form>
+        </td>
+    </tr>
+</table>
+
+<footer>
+<hr>
+<%
+    std::string yearString = std::to_string(2017);
+    int year = Poco::DateTime().year();
+    if (year > 2017)
+    {
+        yearString += '-' + std::to_string(year);
+    }
+%>
+<pre>Powered by Tunis Font Packaging Service. Copyright (c) <%= yearString %> Mathieu-Andre Chiasson. ALL RIGHTS RESERVED.</pre>
+</footer>
+</body>
+</html>
+
+<script id="db" type="application/json"><%=TunisGoogleWebFontDB::getJSONDatabase()%></script>
+<script type="text/javascript">
+
+    var font_family_select = document.getElementById('font_family');
+    var font_size_select = document.getElementById('font_size');
+    var font_generate = document.getElementById('font_generate');
+
+    var db = JSON.parse(document.getElementById('db').textContent);
+    db.items.forEach(function (item) {
+        var font_family_option = document.createElement('option');
+        font_family_option.value = item.version;
+        font_family_option.text = item.family;
+        if (item.family === 'Open Sans')
+        {
+            font_family_option.selected = true;
+        }
+        font_family_select.add(font_family_option);
+    });
+
+    for(var i = 8; i <= 128; i+=8)
+    {
+        var font_size_option = document.createElement('option');
+        font_size_option.value = i;
+        font_size_option.text = i.toString() + 'px';
+        if (i == 32) font_size_option.selected = true;
+        font_size_select.add(font_size_option);
+    }
+
+    function refreshGenerateAction() {
+        var family = font_family_select.options[font_family_select.selectedIndex].text;
+        var fontSize = font_size_select.options[font_size_select.selectedIndex].value;
+        font_generate.action = "/generate?family=" + family + "&fontSize=" + fontSize;
+    }
+
+    font_family_select.onchange = refreshGenerateAction;
+    font_size_select.onchange = refreshGenerateAction;
+    refreshGenerateAction();
+
+</script>

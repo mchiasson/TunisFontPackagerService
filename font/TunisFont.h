@@ -44,7 +44,6 @@ public:
     ~TunisFont();
     TunisFont &operator=(const TunisFont& other);
 
-    inline const std::string &getVersion() const {return m_version;}
     inline const std::string &getFamily() const {return m_family;}
     inline const TunisFontStyle &getStyle() const {return m_style;}
     inline const std::string &getFileName() const {return m_fileName;}
@@ -58,7 +57,6 @@ private:
     FT_Library m_library;
     FT_Face m_face;
 
-    std::string  m_version;
     std::string  m_family;
     TunisFontStyle m_style;
     std::string  m_fileName;
