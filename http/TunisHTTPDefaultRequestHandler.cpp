@@ -31,6 +31,7 @@
 #include <Poco/LogStream.h>
 
 #include <TunisRC.h>
+#include <TunisSchema.h>
 
 void TunisHTTPDefaultRequestHandler::handleRequest(Poco::Net::HTTPServerRequest& request, Poco::Net::HTTPServerResponse& response)
 {
@@ -52,6 +53,16 @@ void TunisHTTPDefaultRequestHandler::handleRequest(Poco::Net::HTTPServerRequest&
     {
         response.setContentType("text/javascript");
         response.send() << public_glutil_js;
+    }
+    else if (request.getURI() == "/TunisFonts_generated.h")
+    {
+        response.setContentType("text/plain");
+        response.send() << schema_TunisFonts_generated_h;
+    }
+    else if (request.getURI() == "/TunisFonts_generated.js")
+    {
+        response.setContentType("text/javascript");
+        response.send() << schema_TunisFonts_generated_js;
     }
     else
     {
